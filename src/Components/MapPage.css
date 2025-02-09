@@ -44,7 +44,7 @@
 .directions-panel {
   position: absolute;
   top: 20px;
-  right: 20px;
+  left: 20px;
   width: 300px;
   max-width: 90%;
   max-height: calc(100vh - 100px);
@@ -239,4 +239,26 @@
     font-size: 13px;
     bottom: 12px;
   }
+}
+
+
+
+
+/* MapPage.css */
+.location-image-container {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: white;
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  z-index: 1000;
+}
+
+.location-image {
+  width: 200px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 4px;
 }
