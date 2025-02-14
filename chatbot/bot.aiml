@@ -1,0 +1,10 @@
+<aiml version="1.0.1">
+    <category>
+        <pattern>HELLO</pattern>
+        <template>Hello! How can I assist you?</template>
+    </category>
+    <category>
+        <pattern>WHAT IS YOUR NAME</pattern>
+        <template>I'm an AIML chatbot!</template>
+    </category>
+</aiml>
