@@ -1,10 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <aiml version="1.0.1">
     <category>
         <pattern>HELLO</pattern>
-        <template>Hello! How can I assist you?</template>
+        <template>Hello! How can I assist you with campus navigation today?</template>
     </category>
+    
+    <category>
+        <pattern>HI</pattern>
+        <template><srai>HELLO</srai></template>
+    </category>
+    
     <category>
         <pattern>WHAT IS YOUR NAME</pattern>
-        <template>I'm an AIML chatbot!</template>
+        <template>I'm your Campus Navigator Assistant! I can help you find locations around campus.</template>
+    </category>
+    
+    <category>
+        <pattern>*</pattern>
+        <template>I'm not sure how to respond to that. Could you please ask me about campus locations or navigation?</template>
     </category>
 </aiml>

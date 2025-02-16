@@ -3,7 +3,7 @@ from flask_pymongo import PyMongo
 from flask_cors import CORS
 from bson import json_util
 from datetime import datetime
-
+import logging
 from chatbot.chat import chatbot
 
 
@@ -18,13 +18,28 @@ mongo = PyMongo(app)
 response = chatbot.get_response("HELLO")
 print(response)
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    message = request.json.get('message')
-    response = chatbot.get_response(message)
-    return jsonify({'response': response})
-
+    try:
+        message = request.json.get('message')
+        if not message:
+            return jsonify({'response': 'Please provide a message.'}), 400
+            
+        # Get response from chatbot
+        response = chatbot.get_response(message)
+        logger.info(f"User message: {message}")
+        logger.info(f"Bot response: {response}")
+        
+        return jsonify({'response': str(response)})
+        
+    except Exception as e:
+        logger.error(f"Error in chat endpoint: {str(e)}")
+        return jsonify({'response': 'Sorry, I encountered an error!'}), 500
 
 
 @app.route('/api/search', methods=['GET'])
