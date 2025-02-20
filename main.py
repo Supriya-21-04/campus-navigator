@@ -4,24 +4,23 @@ from flask_cors import CORS
 from bson import json_util
 from datetime import datetime
 import logging
-from chatbot.chat import chatbot
-
+from chatbot.chat import chatbot  
+from chatbot.semantic_model import find_best_match
 
 app = Flask(__name__)
 CORS(app)
 
-# MongoDB URI and configuration
+# MongoDB connection
 app.config["MONGO_URI"] = "mongodb://localhost:27017/campus_navigator"
 mongo = PyMongo(app)
 
-#just to see in terminal if it is coming
+# Test chatbot response in terminal
 response = chatbot.get_response("HELLO")
 print(response)
 
-# Configure logging
+# Logging configuration
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -29,19 +28,25 @@ def chat():
         message = request.json.get('message')
         if not message:
             return jsonify({'response': 'Please provide a message.'}), 400
-            
-        # Get response from chatbot
-        response = chatbot.get_response(message)
+
+        # Find the closest question
+        best_match = find_best_match(message.upper())
+        
+        if best_match:
+            # Get response from AIML for the matched question
+            response = chatbot.get_response(best_match)
+        else:
+            response = chatbot.get_response(message.upper())
+
         logger.info(f"User message: {message}")
         logger.info(f"Bot response: {response}")
         
         return jsonify({'response': str(response)})
-        
+
     except Exception as e:
         logger.error(f"Error in chat endpoint: {str(e)}")
         return jsonify({'response': 'Sorry, I encountered an error!'}), 500
-
-
+    
 @app.route('/api/search', methods=['GET'])
 def search_locations():
     query = request.args.get('q', '').strip()
@@ -115,33 +120,51 @@ def increment_search_count():
 @app.route('/api/top-places', methods=['GET'])
 def get_top_places():
     try:
-        # Find the 5 most recent unique locations
-        pipeline = [
-            # Sort by timestamp descending (most recent first)
-            {"$sort": {"timestamp": -1}},
-            # Group by location name to get unique locations
-            {"$group": {
-                "_id": "$location.name",
-                "firstDoc": {"$first": "$$ROOT"}
-            }},
-            # Limit to 5 results
-            {"$limit": 5},
-            # Project the fields we want
-            {"$project": {
-                "_id": 0,
-                "name": "$firstDoc.location.name",
-                "coordinates": "$firstDoc.location.coordinates",
-                "image_url": "$firstDoc.location.image_url"
-            }}
-        ]
+        # Check if any documents have search_count > 0
+        has_popular = mongo.db.locations.count_documents({"search_count": {"$gt": 0}})
         
-        recent_places = list(mongo.db.recent_searches.aggregate(pipeline))
-        return jsonify(recent_places)
+        if has_popular:
+            # Get locations with search_count > 0
+            popular_places = list(mongo.db.locations.find(
+                {"search_count": {"$gt": 0}},
+                {"name": 1, "coordinates": 1, "image_url": 1, "search_count": 1, "_id": 0}
+            ).sort("search_count", -1).limit(5))
+            logger.info(f"Found {len(popular_places)} popular places with search_count > 0")
+        else:
+            # Get first 5 locations regardless of search_count
+            popular_places = list(mongo.db.locations.find(
+                {},
+                {"name": 1, "coordinates": 1, "image_url": 1, "search_count": 1, "_id": 0}
+            ).limit(5))
+            logger.info(f"No popular places found, returning first {len(popular_places)} locations")
+        
+        return jsonify(popular_places)
     
     except Exception as e:
-        print(f"Error fetching top places: {str(e)}")
+        logger.error(f"Error fetching top places: {str(e)}")
         return jsonify({"error": "Failed to fetch top places"}), 500
 
+@app.route('/api/debug/locations', methods=['GET'])
+def debug_locations():
+    try:
+        # Count total locations
+        total_count = mongo.db.locations.count_documents({})
+        
+        # Get a sample of up to 5 locations
+        sample_locations = list(mongo.db.locations.find({}, {"name": 1, "search_count": 1, "_id": 0}).limit(5))
+        
+        return jsonify({
+            "total_locations": total_count,
+            "sample_locations": sample_locations,
+            "database_connected": True
+        })
+    except Exception as e:
+        logger.error(f"Database debug error: {str(e)}")
+        return jsonify({
+            "error": str(e),
+            "database_connected": False
+        }), 500
+    
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5001, debug=True)
 

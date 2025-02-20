@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -10,22 +8,30 @@ import logo from "./logo.png";
 const Navbar = ({ onPlaceSelected }) => {
   const navigate = useNavigate();
   const [topPlaces, setTopPlaces] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchTopPlaces = async () => {
+    setIsLoading(true);
     try {
       const response = await axios.get("http://localhost:5001/api/top-places");
-      setTopPlaces(response.data);
+      if (Array.isArray(response.data) && response.data.length > 0) {
+        setTopPlaces(response.data);
+      } else {
+        console.warn("No places returned from API:", response.data);
+      }
     } catch (error) {
       console.error("Error fetching top places:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Fetch top places initially and set up refresh interval
+  // Fetch top places initially
   useEffect(() => {
     fetchTopPlaces();
     
-    // Refresh top places every 5 seconds
-    const interval = setInterval(fetchTopPlaces, 5000);
+    // Refresh top places periodically
+    const interval = setInterval(fetchTopPlaces, 30000);
     
     // Cleanup interval on component unmount
     return () => clearInterval(interval);
@@ -67,18 +73,26 @@ const Navbar = ({ onPlaceSelected }) => {
           Open Chatbot
         </button>
 
-        
-        <div className="top-places">
-          {topPlaces.map((place) => (
-            <button
-              key={place.name}
-              className="top-place-button"
-              onClick={() => handleTopPlaceClick(place)}
-            >
-              {place.name}
-            </button>
-          ))}
-        </div>
+        {topPlaces.length > 0 && (
+          <div className="top-places-section">
+            <h3>Popular Locations</h3>
+            <div className="top-places">
+              {isLoading ? (
+                <span className="loading-text">Loading...</span>
+              ) : (
+                topPlaces.map((place) => (
+                  <button
+                    key={place.name}
+                    className="top-place-button"
+                    onClick={() => handleTopPlaceClick(place)}
+                  >
+                    {place.name}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
